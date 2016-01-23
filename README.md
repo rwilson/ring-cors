@@ -1,15 +1,13 @@
 # Ring CORS
-  [![Build Status](https://travis-ci.org/r0man/ring-cors.png)](https://travis-ci.org/r0man/ring-cors)
-  [![Dependencies Status](http://jarkeeper.com/r0man/ring-cors/status.png)](http://jarkeeper.com/r0man/ring-cors)
-  [![Gittip](http://img.shields.io/gittip/r0man.svg)](https://www.gittip.com/r0man)
 
-Ring middleware for Cross-Origin Resource Sharing.
+Ring middleware for Cross-Origin Resource Sharing. Forked from r0man/ring-cors to improve
+disallowed request responses.
 
 ## Installation
 
-Via Clojars: https://clojars.org/ring-cors
+Via Clojars: https://clojars.org/rwilson/ring-cors
 
-[![Current Version](https://clojars.org/ring-cors/latest-version.svg)](https://clojars.org/ring-cors)
+[![Clojars Project](http://clojars.org/rwilson/ring-cors/latest-version.svg)](http://clojars.org/rwilson/ring-cors)
 
 ## Usage
 
@@ -21,6 +19,7 @@ Via Clojars: https://clojars.org/ring-cors
 
 ## License
 
-Copyright (C) 2013-2014 r0man
+Copyright for portions of ring-ocrs are held by r0man, 2013-2014. All other copyright for ring-cors are
+held by Ryan Wilson, 2015.
 
 Distributed under the Eclipse Public License, the same as Clojure.
