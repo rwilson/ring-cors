@@ -2,6 +2,11 @@
   (:require [clojure.test :refer :all]
             [ring.middleware.cors :refer :all]))
 
+(defn disallowed-response?
+  [response]
+  (and (= 400 (:status response))
+       (= "request disallowed" (:body response))))
+
 (deftest test-allow-request?
   (testing "with empty vector"
     (is (not (allow-request? {:headers {"origin" "http://eample.com"}}
@@ -85,20 +90,22 @@
             :body "preflight complete"})))
 
   (testing "method not allowed"
-    (is (nil? (handler
-               {:request-method :options
-                :uri "/"
-                :headers {"origin" "http://example.com"
-                          "access-control-request-method" "DELETE"}}))))
+    (is (disallowed-response?
+         (handler
+          {:request-method :options
+           :uri "/"
+           :headers {"origin" "http://example.com"
+                     "access-control-request-method" "DELETE"}}))))
 
   (testing "header not allowed"
     (let [headers {"origin" "http://example.com"
                    "access-control-request-method" "GET"
                    "access-control-request-headers" "x-another-custom-header"}]
-      (is (nil? (handler
-                 {:request-method :options
-                  :uri "/"
-                  :headers headers}))))))
+      (is (disallowed-response?
+           (handler
+            {:request-method :options
+             :uri "/"
+             :headers headers}))))))
 
 (deftest test-preflight-header-subset
   (is (= (handler {:request-method :options
@@ -120,9 +127,10 @@
                      :uri "/"
                      :headers {"origin" "http://example.com"}}))))
   (testing "failure"
-    (is (nil? (handler {:request-method :get
-                        :uri "/"
-                        :headers {"origin" "http://foo.com"}})))))
+    (is (disallowed-response?
+         (handler {:request-method :get
+                   :uri "/"
+                   :headers {"origin" "http://foo.com"}})))))
 
 (deftest test-no-cors-header-when-handler-returns-nil
   (is (nil? ((wrap-cors (fn [_] nil)
@@ -139,13 +147,14 @@
              {:request-method :options :uri "/"}))))
 
 (deftest test-method-not-allowed
-  (is (nil? ((wrap-cors
-              (fn [_] nil)
-              :access-control-allow-origin #".*"
-              :access-control-allow-methods [:get :post :patch :put :delete])
-             {:request-method :options
-              :headers {"origin" "http://foo.com"}
-              :uri "/"}))))
+  (is (disallowed-response?
+       ((wrap-cors
+         (fn [_] nil)
+         :access-control-allow-origin #".*"
+         :access-control-allow-methods [:get :post :patch :put :delete])
+        {:request-method :options
+         :headers {"origin" "http://foo.com"}
+         :uri "/"}))))
 
 (deftest additional-headers
   (let [response ((wrap-cors (fn [_] {:status 200})

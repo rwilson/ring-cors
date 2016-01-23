@@ -11,7 +11,7 @@
 (defn preflight?
   "Returns true if the request is a preflight request"
   [request]
-  (= (request :request-method) :options))
+  (= (:request-method request) :options))
 
 (defn parse-headers
   "Transforms a comma-separated string to a set"
@@ -52,20 +52,19 @@
         allowed-origins (:access-control-allow-origin access-control)
         allowed-headers (:access-control-allow-headers access-control)
         allowed-methods (:access-control-allow-methods access-control)]
-    (if (and origin
-             (seq allowed-origins)
-             (seq allowed-methods)
-             (some #(re-matches % origin) allowed-origins)
-             (if (preflight? request)
-               (allow-preflight-headers? request allowed-headers)
-               true)
-             (allow-method? request allowed-methods))
-      true false)))
+    (boolean (and origin
+                  (seq allowed-origins)
+                  (seq allowed-methods)
+                  (some #(re-matches % origin) allowed-origins)
+                  (if (preflight? request)
+                    (allow-preflight-headers? request allowed-headers)
+                    true)
+                  (allow-method? request allowed-methods)))))
 
 (defn header-name
   "Returns the capitalized header name as a string."
   [header]
-  (if header
+  (when header
     (->> (str/split (name header) #"-")
          (map str/capitalize )
          (str/join "-" ))))
@@ -111,7 +110,7 @@
   "Add the access-control headers to the response based on the rules
   and what came on the header."
   [request access-control response]
-  (let [allowed-headers (access-control :access-control-allow-headers)
+  (let [allowed-headers (:access-control-allow-headers access-control)
         rest-of-headers (dissoc access-control
                                 :access-control-allow-headers)
         unnormalized-resp (->> response
@@ -126,6 +125,18 @@
       (update-in [:access-control-allow-headers] #(if (coll? %) (set %) %))
       (update-in [:access-control-allow-origin] #(if (sequential? %) % [%]))))
 
+(def preflight-response
+  "Ring response map for preflight requests."
+  {:status 200
+   :headers {}
+   :body "preflight complete"})
+
+(def disallowed-response
+  "Ring response map for disallowed requests"
+  {:status 400
+   :headers {}
+   :body "request disallowed"})
+
 (defn wrap-cors
   "Middleware that adds Cross-Origin Resource Sharing headers.
 
@@ -139,12 +150,10 @@
   (let [access-control (normalize-config access-control)]
     (fn [request]
       (if (and (preflight? request) (allow-request? request access-control))
-        (let [blank-response {:status 200
-                              :headers {}
-                              :body "preflight complete"}]
-          (add-access-control request access-control blank-response))
+        (add-access-control request access-control preflight-response)
         (if (origin request)
           (if (allow-request? request access-control)
-            (if-let [response (handler request)]
-              (add-access-control request access-control response)))
+            (when-let [response (handler request)]
+              (add-access-control request access-control response))
+            (add-access-control request access-control disallowed-response))
           (handler request))))))
