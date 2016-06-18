@@ -158,6 +158,7 @@
 
 (deftest additional-headers
   (let [response ((wrap-cors (fn [_] {:status 200})
+                             :access-control-allow-credentials "true"
                              :access-control-allow-origin #".*"
                              :access-control-allow-methods [:get]
                              :access-control-expose-headers "Etag")
@@ -165,9 +166,11 @@
                    :uri "/"
                    :headers {"origin" "http://example.com"}})]
     (is (= {:status 200
-            :headers {"Access-Control-Allow-Origin" "http://example.com"
-                      "Access-Control-Allow-Methods" "GET"
-                      "Access-Control-Expose-Headers" "Etag"}}
+            :headers
+            {"Access-Control-Allow-Credentials" "true"
+             "Access-Control-Allow-Methods" "GET"
+             "Access-Control-Allow-Origin" "http://example.com"
+             "Access-Control-Expose-Headers" "Etag"}}
            response))))
 
 (deftest test-parse-headers
@@ -179,3 +182,17 @@
     "Accept" #{"accept"}
     "Accept, Content-Type" #{"accept" "content-type"}
     " Accept ,  Content-Type " #{"accept" "content-type"}))
+
+(deftest test-preflight-headers?
+  (testing "Acceptable allowed-headers"
+    (let [headers {"Access-Control-Allow-Headers" "Accept, Content-Type"}
+          request {:request-method :get
+                   :uri "/"
+                   :headers headers}]
+      (are [allowed-headers]
+          (is (true? (allow-preflight-headers? request allowed-headers)))
+        [:accept :content-type]
+        [:Accept :Content-Type]
+        ["accept" "content-type"]
+        ["Accept" "Content-Type"]
+        ["  cOntenT-typE " " acCePt"]))))
